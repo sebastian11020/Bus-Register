@@ -13,7 +13,11 @@ function readDataFromFile(){
   return JSON.parse(data);
 }
 
-app.get('/get-bus/:id', (req, res) => {
+function writeDataToFile(data) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+}
+
+app.get('/get/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const data = readDataFromFile;
   const item = data.find((item) => item.id === id);
@@ -24,34 +28,79 @@ app.get('/get-bus/:id', (req, res) => {
   }
 });
 
-app.post('/save-data', (req, res) => {
+app.post('/save', (req, res) => {
   let body = '';
 
   req.on('data', chunk => {
-    body += chunk.toString();
+    body += chunk.toString(); 
   });
 
   req.on('end', () => {
+    console.log('Cuerpo de la solicitud recibido:', body);
+
     try {
       const data = JSON.parse(body);
-      
+
+      const dataArray = Array.isArray(data) ? data : [data];
+
+      dataArray.forEach(item => {
+        if (typeof item.id === 'undefined' || typeof item.arrivalTime === 'undefined') {
+          throw new Error('Cada objeto debe tener un ID y una hora de llegada.');
+        }
+      });
+
       const filePath = path.join(__dirname, 'data.json');
       
       let existingData = [];
       if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath);
+        const fileContent = fs.readFileSync(filePath, 'utf8');
         existingData = JSON.parse(fileContent);
       }
 
-      existingData.push(data);
-      
+      dataArray.forEach(data => {
+        const existingItem = existingData.find(item => item.id === data.id);
+        if (existingItem) {
+          return res.status(400).send(`El ID ${data.id} ya existe. Intenta con otro ID.`);
+        }
+
+        const arrivalTime = new Date().toISOString();
+        
+        const newData = {
+          ...data,
+          arrivalTime: arrivalTime 
+        };
+
+        existingData.push(newData);
+      });
+
       fs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
       
       res.send('Datos guardados correctamente.');
     } catch (error) {
-      res.status(400).send('Error al procesar datos.');
+      console.error('Error al procesar datos:', error.message);
+      res.status(400).send(`Error al procesar datos: ${error.message}`);
     }
   });
+});
+
+app.patch('/update/:id',(req, res) => {
+
+});
+
+app.delete('/delete/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  let data = readDataFromFile(); 
+
+  const newData = data.filter((item) => item.id !== id);
+
+  if (data.length === newData.length) {
+
+    return res.status(404).json({ message: 'Elemento no encontrado' });
+  }
+
+  writeDataToFile(newData);
+
+  res.json({ message: 'Elemento eliminado correctamente' });
 });
 
 app.listen(PORT, () => {
