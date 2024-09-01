@@ -8,9 +8,15 @@ const PORT = 3000;
 
 const filePath = path.join(__dirname,"data.json");
 
-function readDataFromFile(){
-  const data = fs.readFileSync(filePath,'utf8');
-  return JSON.parse(data);
+function readDataFromFile() {
+  const filePath = path.join(__dirname, 'data.json');
+  
+  if (fs.existsSync(filePath)) {
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(fileContent);
+  } else {
+    return []; 
+  }
 }
 
 function writeDataToFile(data) {
@@ -19,12 +25,20 @@ function writeDataToFile(data) {
 
 app.get('/get/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const data = readDataFromFile;
-  const item = data.find((item) => item.id === id);
-  if(item){
-    res.json(item);
-  }else{
-    res.status(404).json({message: 'Elemento no encontrado'})
+  
+  try {
+    const data = readDataFromFile();
+    
+    const item = data.find((item) => item.id === id);
+    
+    if (item) {
+      res.json(item); 
+    } else {
+      res.status(404).json({ message: 'Elemento no encontrado' }); 
+    }
+  } catch (error) {
+    console.error('Error al leer datos:', error.message);
+    res.status(500).json({ message: 'Error al procesar la solicitud' });
   }
 });
 
@@ -40,6 +54,7 @@ app.post('/save', (req, res) => {
 
     try {
       const data = JSON.parse(body);
+      console.log('Datos convertidos a JSON:', data);
 
       const dataArray = Array.isArray(data) ? data : [data];
 
@@ -54,7 +69,12 @@ app.post('/save', (req, res) => {
       let existingData = [];
       if (fs.existsSync(filePath)) {
         const fileContent = fs.readFileSync(filePath, 'utf8');
-        existingData = JSON.parse(fileContent);
+        if (fileContent.trim() === '') {
+          existingData = [];
+        } else {
+          existingData = JSON.parse(fileContent);
+        }
+        console.log('Contenido del archivo existente:', existingData);
       }
 
       dataArray.forEach(data => {
@@ -62,14 +82,11 @@ app.post('/save', (req, res) => {
         if (existingItem) {
           return res.status(400).send(`El ID ${data.id} ya existe. Intenta con otro ID.`);
         }
-
         const arrivalTime = new Date().toISOString();
-        
         const newData = {
           ...data,
-          arrivalTime: arrivalTime 
+          arrivalTime: arrivalTime
         };
-
         existingData.push(newData);
       });
 
