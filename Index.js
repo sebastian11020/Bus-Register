@@ -1,10 +1,27 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+
 const app = express();
 const PORT = 3000;
 
 
-app.get('/', (req, res) => {
-  res.send('¡Hola, Express!');
+const filePath = path.join(__dirname,"data.json");
+
+function readDataFromFile(){
+  const data = fs.readFileSync(filePath,'utf8');
+  return JSON.parse(data);
+}
+
+app.get('/get-bus/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const data = readDataFromFile;
+  const item = data.find((item) => item.id === id);
+  if(item){
+    res.json(item);
+  }else{
+    res.status(404).json({message: 'Elemento no encontrado'})
+  }
 });
 
 app.post('/save-data', (req, res) => {
