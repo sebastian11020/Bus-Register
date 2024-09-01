@@ -1,0 +1,14 @@
+{
+  "name": "savebus",
+  "version": "1.0.0",
+  "description": "System to register buses with their license plate and arrival time.",
+  "main": "Index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Sebastian Daza",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
