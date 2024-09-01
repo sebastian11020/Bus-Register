@@ -100,8 +100,51 @@ app.post('/save', (req, res) => {
   });
 });
 
-app.patch('/update/:id',(req, res) => {
+app.patch('/update/:id', (req, res) => {
+  const id = parseInt(req.params.id); 
+  let body = '';
 
+  req.on('data', chunk => {
+    body += chunk.toString(); 
+  });
+
+  req.on('end', () => {
+    try {
+      const updates = JSON.parse(body); 
+
+      if (typeof updates !== 'object' || Array.isArray(updates)) {
+        return res.status(400).json({ message: 'El cuerpo de la solicitud debe ser un objeto' });
+      }
+
+      if (updates.hasOwnProperty('id')) {
+        return res.status(400).json({ message: 'No se puede modificar el campo id' });
+      }
+
+      const { id: _, ...updateFields } = updates;
+
+      const filePath = path.join(__dirname, 'data.json');
+      let existingData = [];
+
+      if (fs.existsSync(filePath)) {
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        existingData = JSON.parse(fileContent);
+      }
+
+      const itemIndex = existingData.findIndex((item) => item.id === id);
+      if (itemIndex === -1) {
+        return res.status(404).json({ message: 'Elemento no encontrado' });
+      }
+      const updatedItem = { ...existingData[itemIndex], ...updateFields };
+      existingData[itemIndex] = updatedItem;
+
+      fs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
+
+      res.json(updatedItem);
+    } catch (error) {
+      console.error('Error al actualizar datos:', error.message);
+      res.status(500).json({ message: 'Error al procesar la solicitud' });
+    }
+  });
 });
 
 app.delete('/delete/:id', (req, res) => {
